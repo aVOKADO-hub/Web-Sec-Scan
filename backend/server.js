@@ -3,6 +3,7 @@ import axios from 'axios';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import Scan from './src/models/scanSchema.js';
+import Vulnerability from './src/models/vulnerabilitySchema.js';
 
 const port = 5000;
 const app = express();
@@ -85,12 +86,16 @@ app.get('/scan', async (req, res) => {
     const scanResponse = await startScan(target, scanType);
 
     const scanData = new Scan({
-      targetUrl: target,
-      scanId: scanResponse.scan,
-      scanType,
-      status: 'Running',
-    });
-    await scanData.save();
+  targetUrl: target,
+  scanId: scanResponse.scan,
+  scanType,
+  status: 'Running',
+  alert: 'Sample Alert', // Перевірка передачі
+  risk: 'High',          // Перевірка передачі
+  description: 'Sample description', // Перевірка передачі
+});
+await scanData.save();
+
 
     res.json({ message: 'Scan started successfully', scanId: scanResponse.scan });
   } catch (error) {
@@ -131,6 +136,37 @@ app.get('/scan-status', async (req, res) => {
     res.status(500).json({ error: 'Failed to get scan status', details: error.message });
   }
 });
+
+
+
+
+
+app.get('/vulnerabilities', async (req, res) => {
+  const { scanId } = req.query;
+
+  console.log(`${typeof scanId} + ${scanId}`)
+
+  if (!scanId) {
+    return res.status(400).json({ error: 'Scan ID is required' });
+  }
+
+  try {
+    const vulnerabilities = await Scan.find({ scanId: String(scanId) });
+
+    console.log('Found vulnerabilities count:', vulnerabilities.length); // Кількість знайдених вразливостей
+
+    if (!vulnerabilities.length) {
+      return res.status(404).json({ error: 'No vulnerabilities found for the given scan ID' });
+    }
+
+    return res.json(vulnerabilities);
+  } catch (error) {
+    console.error('Error fetching vulnerabilities:', error.message);
+    return res.status(500).json({ error: 'Failed to fetch vulnerabilities' });
+  }
+});
+
+
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
