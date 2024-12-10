@@ -1,17 +1,22 @@
 import mongoose from 'mongoose';
 
-const scanSchema = new mongoose.Schema({
-  targetUrl: { type: String, required: true },
-  scanId: { type: String, required: true },
-  scanType: { type: String, default: 'all' },
-  status: { type: String, default: 'Started' },
-  alert: { type: String },
-  risk: { type: String },
-  description: { type: String }, // Додано поле
-  startTime: { type: Date, default: Date.now },
-  endTime: { type: Date },
-}, { versionKey: false });
+const alertSchema = new mongoose.Schema({
+  alert: String,
+  risk: String,
+  description: String,
+  url: String,
+  solution: String,
+}, {versionKey:false});
 
+const scanSchema = new mongoose.Schema({
+  targetUrl: String,
+  scanId: String,
+  scanType: String,
+  status: String,
+  startTime: { type: Date, default: Date.now },
+  endTime: Date,
+  alerts: [alertSchema], 
+}, {versionKey:false});
 
 const Scan = mongoose.model('Scan', scanSchema);
 

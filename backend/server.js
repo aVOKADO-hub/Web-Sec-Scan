@@ -103,6 +103,22 @@ await scanData.save();
   }
 });
 
+const fetchAlerts = async (targetUrl) => {
+  try {
+    const response = await axios.get(`${zapUrl}/JSON/alert/view/alerts`, {
+      params: {
+        baseurl: targetUrl,
+        apikey: apiKey,
+      },
+    });
+    return response.data.alerts; // Масив знайдених вразливостей
+  } catch (error) {
+    console.error('Error fetching alerts:', error.response?.data || error.message);
+    throw new Error('Failed to fetch alerts');
+  }
+};
+
+// Оновлений маршрут для перевірки статусу та збереження результатів
 app.get('/scan-status', async (req, res) => {
   const { scanId } = req.query;
 
@@ -118,26 +134,35 @@ app.get('/scan-status', async (req, res) => {
       },
     });
 
+    const scanStatus = parseInt(response.data.status, 10);
     const scan = await Scan.findOne({ scanId });
+
     if (!scan) {
       return res.status(404).json({ error: 'Scan not found in the database' });
     }
 
-    scan.status = response.data.status;
-    if (response.data.status === '100') {
+    scan.status = scanStatus;
+
+    // Якщо сканування завершено, отримуємо вразливості та зберігаємо їх
+    if (scanStatus === 100) {
+      const alerts = await fetchAlerts(scan.targetUrl);
+      scan.alerts = alerts.map((alert) => ({
+        alert: alert.alert,
+        risk: alert.risk,
+        description: alert.description,
+        url: alert.url,
+        solution: alert.solution,
+      }));
       scan.endTime = new Date();
     }
-    await scan.save();
 
-    res.json(response.data);
+    await scan.save();
+    res.json({ status: scanStatus, alerts: scan.alerts || [] });
   } catch (error) {
-    console.error('Error getting scan status:', error.message);
-    res.status(500).json({ error: 'Failed to get scan status', details: error.message });
+    console.error('Error checking scan status:', error.message);
+    res.status(500).json({ error: 'Failed to check scan status', details: error.message });
   }
 });
-
-
-
 
 
 app.get('/vulnerabilities', async (req, res) => {
