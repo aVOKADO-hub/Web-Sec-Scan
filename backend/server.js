@@ -3,7 +3,6 @@ import axios from 'axios';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import Scan from './src/models/scanSchema.js';
-import Vulnerability from './src/models/vulnerabilitySchema.js';
 
 const port = 5000;
 const app = express();
